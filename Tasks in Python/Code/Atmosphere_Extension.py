@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from scipy.integrate import solve_ivp
+from matplotlib.animation import FFMpegWriter
 
 g = 9.81
 A = 0.002
@@ -47,8 +48,8 @@ def solve_projectile(u, theta, h, with_drag=True):
 def time_to_reach_x_axis(x, y, t):
     for i in range(len(y)):
         if y[i] <= 0:
-            return t[i]
-    return np.nan
+            return t[i], i
+    return np.nan, len(y) - 1
 
 def plot_trajectories():
     u = 10
@@ -57,8 +58,11 @@ def plot_trajectories():
 
     t_drag, x_drag, y_drag, vx_drag, vy_drag = solve_projectile(u, theta, h, with_drag=True)
     t_no_drag, x_no_drag, y_no_drag, vx_no_drag, vy_no_drag = solve_projectile(u, theta, h, with_drag=False)
-    time_drag = time_to_reach_x_axis(x_drag, y_drag, t_drag)
-    time_no_drag = time_to_reach_x_axis(x_no_drag, y_no_drag, t_no_drag)
+    time_drag, idx_drag = time_to_reach_x_axis(x_drag, y_drag, t_drag)
+    time_no_drag, idx_no_drag = time_to_reach_x_axis(x_no_drag, y_no_drag, t_no_drag)
+
+    # Determine the minimum index where both trajectories hit the x-axis
+    stop_idx = max(idx_drag, idx_no_drag)
 
     fig, ax = plt.subplots(figsize=(12, 6))
     plt.subplots_adjust(right=0.75)
@@ -104,63 +108,53 @@ def plot_trajectories():
         nonlocal final_speed_drag, final_pressure_drag, final_time_drag
         nonlocal final_speed_no_drag, final_pressure_no_drag, final_time_no_drag
 
-        if y_drag[i] >= 0:
-            x_data_drag = x_drag[:i + 1]
-            y_data_drag = y_drag[:i + 1]
-            vx_drag_curr = vx_drag[i]
-            vy_drag_curr = vy_drag[i]
-            final_speed_drag = np.sqrt(vx_drag_curr ** 2 + vy_drag_curr ** 2)
-            final_pressure_drag = drag_force(vx_drag_curr, vy_drag_curr, y_drag[i])
-            final_time_drag = t_drag[i]
+        if i <= stop_idx:
+            if y_drag[i] >= 0:
+                x_data_drag = x_drag[:i + 1]
+                y_data_drag = y_drag[:i + 1]
+                vx_drag_curr = vx_drag[i]
+                vy_drag_curr = vy_drag[i]
+                final_speed_drag = np.sqrt(vx_drag_curr ** 2 + vy_drag_curr ** 2)
+                final_pressure_drag = drag_force(vx_drag_curr, vy_drag_curr, y_drag[i])
+                final_time_drag = t_drag[i]
 
-            line_drag.set_data(x_data_drag, y_data_drag)
-            point_drag.set_data([x_data_drag[-1]], [y_data_drag[-1]])
-        else:
-            line_drag.set_data(x_drag, y_drag)
-            point_drag.set_data([x_drag[-1]], [y_drag[-1]])
+                line_drag.set_data(x_data_drag, y_data_drag)
+                point_drag.set_data([x_data_drag[-1]], [y_data_drag[-1]])
+            else:
+                line_drag.set_data(x_drag[:i + 1], y_drag[:i + 1])
+                point_drag.set_data([x_drag[i]], [0])
 
-        if y_no_drag[i] >= 0:
-            x_data_no_drag = x_no_drag[:i + 1]
-            y_data_no_drag = y_no_drag[:i + 1]
-            vx_no_drag_curr = vx_no_drag[i]
-            vy_no_drag_curr = vy_no_drag[i]
-            final_speed_no_drag = np.sqrt(vx_no_drag_curr ** 2 + vy_no_drag_curr ** 2)
-            final_pressure_no_drag = 0  # Should be zero as there's no drag force
-            final_time_no_drag = t_no_drag[i]
+            if y_no_drag[i] >= 0:
+                x_data_no_drag = x_no_drag[:i + 1]
+                y_data_no_drag = y_no_drag[:i + 1]
+                vx_no_drag_curr = vx_no_drag[i]
+                vy_no_drag_curr = vy_no_drag[i]
+                final_speed_no_drag = np.sqrt(vx_no_drag_curr ** 2 + vy_no_drag_curr ** 2)
+                final_pressure_no_drag = 0  # No drag force
+                final_time_no_drag = t_no_drag[i]
 
-            line_no_drag.set_data(x_data_no_drag, y_data_no_drag)
-            point_no_drag.set_data([x_data_no_drag[-1]], [y_data_no_drag[-1]])
-        else:
-            line_no_drag.set_data(x_no_drag, y_no_drag)
-            point_no_drag.set_data([x_no_drag[-1]], [y_no_drag[-1]])
+                line_no_drag.set_data(x_data_no_drag, y_data_no_drag)
+                point_no_drag.set_data([x_data_no_drag[-1]], [y_data_no_drag[-1]])
+            else:
+                line_no_drag.set_data(x_no_drag[:i + 1], y_no_drag[:i + 1])
+                point_no_drag.set_data([x_no_drag[i]], [0])
 
-        info_box_drag.set_text(
-            f'With Drag:\nSpeed: {final_speed_drag:.2f} m/s\nPressure: {final_pressure_drag:.2f} N/m²\nTime to x-axis: {final_time_drag:.2f} s'
-        )
+            info_box_drag.set_text(
+                f'With Drag:\nSpeed: {final_speed_drag:.2f} m/s\nPressure: {final_pressure_drag:.2f} N/m²\nTime to x-axis: {final_time_drag:.2f} s'
+            )
 
-        info_box_no_drag.set_text(
-            f'Without Drag:\nSpeed: {final_speed_no_drag:.2f} m/s\nPressure: {final_pressure_no_drag:.2f} N/m²\nTime to x-axis: {final_time_no_drag:.2f} s'
-        )
-
-        if y_drag[i] < 0 and y_no_drag[i] < 0:
-            ani.event_source.stop()
+            info_box_no_drag.set_text(
+                f'Without Drag:\nSpeed: {final_speed_no_drag:.2f} m/s\nPressure: {final_pressure_no_drag:.2f} N/m²\nTime to x-axis: {final_time_no_drag:.2f} s'
+            )
 
         return line_drag, line_no_drag, point_drag, point_no_drag, info_box_drag, info_box_no_drag
 
-    def finalize(*args, **kwargs):
-        info_box_drag.set_text(
-            f'With Drag:\nSpeed: {final_speed_drag:.2f} m/s\nPressure: {final_pressure_drag:.2f} N/m²\nTime to x-axis: {final_time_drag:.2f} s'
-        )
-        info_box_no_drag.set_text(
-            f'Without Drag:\nSpeed: {final_speed_no_drag:.2f} m/s\nPressure: {final_pressure_no_drag:.2f} N/m²\nTime to x-axis: {final_time_no_drag:.2f} s'
-        )
+    ani = animation.FuncAnimation(fig, animate, frames=stop_idx+1, init_func=init, blit=True, interval=50, repeat=False)
 
-    final_speed_drag = final_pressure_drag = final_time_drag = 0
-    final_speed_no_drag = final_pressure_no_drag = final_time_no_drag = 0
-    ani = animation.FuncAnimation(fig, animate, frames=len(x_drag), init_func=init, blit=True, interval=50, repeat=False)
-    ani.event_source.add_callback(finalize)
+    # Save the animation as a video file
+    writer = FFMpegWriter(fps=30, metadata={'artist': 'Devansh Srivastava'}, bitrate=1800)
+    ani.save("Atmosphere_Extension.mp4", writer=writer)
 
     plt.show()
-
 
 plot_trajectories()
