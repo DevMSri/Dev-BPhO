@@ -35,46 +35,6 @@ trajectory, = ax.plot(x, y, label='Projectile Path')
 ax.set_xlabel('Horizontal Distance (m)')
 ax.set_ylabel('Vertical Distance (m)')
 ax.set_title('Projectile Motion')
-
-theta_slider_ax = plt.axes([0.15, 0.1, 0.65, 0.03],
-                           facecolor='lightgoldenrodyellow')
-
-u_slider_ax = plt.axes([0.15, 0.15, 0.65, 0.03],
-                       facecolor='lightgoldenrodyellow')
-
-theta_slider = Slider(theta_slider_ax,
-                      'Launch Angle (deg)',
-                      0.0,
-                      90.0,
-                      valinit=initial_theta)
-
-u_slider = Slider(u_slider_ax,
-                  'Initial Speed (m/s)',
-                  0.1,
-                  20.0,
-                  valinit=initial_u)
-
-def update(val):
-    # Get current slider values
-    theta_val = theta_slider.val
-    u_val = u_slider.val
-
-    # Update projectile path
-    x_new, y_new = projectile_motion(theta_val, u_val, g, h, dt)
-    trajectory.set_xdata(x_new)
-    trajectory.set_ydata(y_new)
-
-    # Update plot limits
-    ax.relim()
-    ax.autoscale_view()
-
-    # Redraw the plot
-    fig.canvas.draw_idle()
-
-
-theta_slider.on_changed(update)
-u_slider.on_changed(update)
-
 plt.legend()
 plt.grid(True)
 plt.show()
