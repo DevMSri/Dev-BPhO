@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/Dev-BPhO/static/css/main.b7bb945f.css",
+    "main.js": "/Dev-BPhO/static/js/main.79b3ade4.js",
+    "index.html": "/Dev-BPhO/index.html",
+    "main.b7bb945f.css.map": "/Dev-BPhO/static/css/main.b7bb945f.css.map",
+    "main.79b3ade4.js.map": "/Dev-BPhO/static/js/main.79b3ade4.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.b7bb945f.css",
+    "static/js/main.79b3ade4.js"
+  ]
+}
